@@ -1,0 +1,32 @@
+#!/bin/bash
+if [ -z "${BUILD_NUMBER}" ]; then
+    DEBNAME="${DEBNAME:-snappysnapshot}"
+    BUILD_NUMBER="$(date +%Y%m%d%H%M%S)"
+else
+    DEBNAME="${DEBNAME:-snappy}"
+fi
+ROOT="${PWD}/debroot"
+ARCH="amd64"
+MINORVERSION="0.1"
+VERSION="${MINORVERSION}.${BUILD_NUMBER}"
+
+./autogen.sh
+./configure --prefix=/usr
+make install DESTDIR="${ROOT}"
+
+fpm -s dir \
+    -t deb \
+    --name "${DEBNAME}" \
+    --force \
+    -C "${ROOT}" \
+    -a "${ARCH}" \
+    --version "${VERSION}" \
+    --after-install "build/after-install" \
+    .
+
+DEB="${DEBNAME}_${VERSION}_${ARCH}.deb"
+
+if [[ -n "${DEPLOY}" ]]; then
+    mv "${DEB}" "/mnt/debs/"
+    cp "/mnt/debs/${DEB}" /opt/reprepro-incoming-precise
+fi
